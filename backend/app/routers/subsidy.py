@@ -30,30 +30,37 @@ import json
 router = APIRouter(prefix="/api/subsidy", tags=["subsidy"])
 
 # 批量扫描目录（政策 PDF/文档 所在根目录）
-POLICY_SCAN_ROOT = Path(r"D:\IP workflow\人才补贴明细")
+# 用环境变量 POLICY_SCAN_ROOT 指定；未设置时回落到 backend/policy_docs，
+# 避免在代码里硬编码某台机器的绝对路径（跨机器部署会失效）。
+POLICY_SCAN_ROOT = Path(
+    os.getenv("POLICY_SCAN_ROOT")
+    or (Path(__file__).resolve().parent.parent / "policy_docs")
+)
 
 # 已计入"累计到账"的状态
 DONE_STATUSES = ("paid", "confirmed", "completed")
 
-# 16 个政策（对应 D:\IP workflow\人才补贴明细\ 下文件夹）
+# 16 条演示政策（虚构；名称与区域均为示例，结构与真实政策一致）
+# 16 条演示政策（虚构，结构与真实政策一致：名称 / 类别 / 区域 / 层级）
 SEED_POLICIES = [
-    {"policy_name": "2021-2023相城区重点产业人才计划-薪酬补贴", "policy_category": "薪酬补贴", "region": "相城区", "region_level": "区级"},
-    {"policy_name": "2024-2026相城区重点产业人才计划-薪酬补贴", "policy_category": "薪酬补贴", "region": "相城区", "region_level": "区级"},
-    {"policy_name": "高铁新城顶尖高校毕业生就业创业奖励补贴", "policy_category": "就业创业", "region": "高铁新城", "region_level": "县级"},
-    {"policy_name": "环秀湖产业紧缺专技人才计划", "policy_category": "紧缺专技", "region": "相城区", "region_level": "区级"},
-    {"policy_name": "苏州高铁新城人才租房补贴", "policy_category": "租房", "region": "高铁新城", "region_level": "县级"},
-    {"policy_name": "苏州市高端人才奖励计划", "policy_category": "奖励", "region": "苏州市", "region_level": "市级"},
-    {"policy_name": "苏州市人才乐居租房贴", "policy_category": "租房", "region": "苏州市", "region_level": "市级"},
-    {"policy_name": "苏州市优秀人才专项", "policy_category": "专项", "region": "苏州市", "region_level": "市级"},
-    {"policy_name": "苏州市重点产业紧缺人才计划", "policy_category": "紧缺人才", "region": "苏州市", "region_level": "市级"},
-    {"policy_name": "相城区产业人才专项奖励", "policy_category": "奖励", "region": "相城区", "region_level": "区级"},
-    {"policy_name": "相城区紧缺专技人才计划", "policy_category": "紧缺专技", "region": "相城区", "region_level": "区级"},
-    {"policy_name": "相城区名校优生落户奖励", "policy_category": "落户", "region": "相城区", "region_level": "区级"},
-    {"policy_name": "相城区人才贡献奖励", "policy_category": "贡献", "region": "相城区", "region_level": "区级"},
-    {"policy_name": "相城区人才乐居补贴", "policy_category": "乐居", "region": "相城区", "region_level": "区级"},
-    {"policy_name": "相城区重点产业人才计划-安家补贴", "policy_category": "安家", "region": "相城区", "region_level": "区级"},
-    {"policy_name": "应届高校毕业生租房补贴", "policy_category": "租房", "region": "苏州市", "region_level": "市级"},
+    {"policy_name": "2021-2023 示例区重点产业人才计划-薪酬补贴", "policy_category": "薪酬补贴", "region": "示例区", "region_level": "区级"},
+    {"policy_name": "2024-2026 示例区重点产业人才计划-薪酬补贴", "policy_category": "薪酬补贴", "region": "示例区", "region_level": "区级"},
+    {"policy_name": "示例新城顶尖高校毕业生就业创业奖励补贴", "policy_category": "就业创业", "region": "示例新城", "region_level": "县级"},
+    {"policy_name": "示例湖产业紧缺专技人才计划", "policy_category": "紧缺专技", "region": "示例区", "region_level": "区级"},
+    {"policy_name": "示例新城人才租房补贴", "policy_category": "租房", "region": "示例新城", "region_level": "县级"},
+    {"policy_name": "示例市高端人才奖励计划", "policy_category": "奖励", "region": "示例市", "region_level": "市级"},
+    {"policy_name": "示例市人才乐居租房贴", "policy_category": "租房", "region": "示例市", "region_level": "市级"},
+    {"policy_name": "示例市优秀人才专项", "policy_category": "专项", "region": "示例市", "region_level": "市级"},
+    {"policy_name": "示例市重点产业紧缺人才计划", "policy_category": "紧缺人才", "region": "示例市", "region_level": "市级"},
+    {"policy_name": "示例区产业人才专项奖励", "policy_category": "奖励", "region": "示例区", "region_level": "区级"},
+    {"policy_name": "示例区紧缺专技人才计划", "policy_category": "紧缺专技", "region": "示例区", "region_level": "区级"},
+    {"policy_name": "示例区名校优生落户奖励", "policy_category": "落户", "region": "示例区", "region_level": "区级"},
+    {"policy_name": "示例区人才贡献奖励", "policy_category": "贡献", "region": "示例区", "region_level": "区级"},
+    {"policy_name": "示例区人才乐居补贴", "policy_category": "乐居", "region": "示例区", "region_level": "区级"},
+    {"policy_name": "示例区重点产业人才计划-安家补贴", "policy_category": "安家", "region": "示例区", "region_level": "区级"},
+    {"policy_name": "应届高校毕业生租房补贴", "policy_category": "租房", "region": "示例市", "region_level": "市级"},
 ]
+
 
 
 @router.get("/policies", response_model=list[PolicyOut])
@@ -881,7 +888,7 @@ def scan_policy_folder(
     db: Session = Depends(get_db),
     current_user: SysUser = Depends(get_current_user),
 ):
-    """扫描 D:\\IP workflow\\人才补贴明细，按 folder_name 匹配政策，抽取文档并 AI 解析规则。"""
+    """扫描 政策文档根目录（POLICY_SCAN_ROOT），按 folder_name 匹配政策，抽取文档并 AI 解析规则。"""
     if not POLICY_SCAN_ROOT.exists():
         raise HTTPException(status_code=400, detail=f"扫描目录不存在：{POLICY_SCAN_ROOT}")
     policies = db.query(SubsidyPolicy).filter(SubsidyPolicy.is_deleted == False).all()

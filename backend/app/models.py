@@ -162,7 +162,7 @@ class SubsidyPolicy(Base):
     policy_category = Column(String(50), index=True)  # 薪酬补贴/紧缺人才/租房/房票/...
     region = Column(String(100))
     region_level = Column(String(20))  # 市级/区级/县级
-    folder_name = Column(String(200))  # 对应 D:\IP workflow\人才补贴明细\ 下文件夹名
+    folder_name = Column(String(200))  # 对应政策扫描目录（POLICY_SCAN_ROOT）下的文件夹名
     valid_from = Column(Date)
     valid_until = Column(Date)
     source_file_id = Column(Integer, ForeignKey("file_storage.id"))

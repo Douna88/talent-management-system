@@ -544,7 +544,7 @@ POLICY_RULES_SCHEMA = """
 {
   "policy_name": "政策名称",
   "policy_category": "类别(薪酬补贴/紧缺人才/租房/房票/奖励/落户/乐居/就业创业/贡献/专项/安家/其他)",
-  "region": "区域(苏州市/相城区/高铁新城等)",
+  "region": "区域(示例市/示例区/示例新城等)",
   "region_level": "级别(市级/区级/县级)",
   "valid_from": "起始年份或日期，未知则null",
   "valid_until": "截止年份或日期，未知则null",
