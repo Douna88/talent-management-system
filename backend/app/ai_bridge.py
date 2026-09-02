@@ -195,8 +195,8 @@ DB_SCHEMA = """
 
 4) subsidy_application 补贴申领（每人每政策一条，574 条左右）
    id, policy_id(关联 subsidy_policy.id), name(姓名),
-   bu(BU，取值形如 BU1-Air / BU2-Glider / BU5-sMA-RT，一定以 BU 开头),
-   department(部门，取值形如 Mechanics / Electronics / System and Test / Mathware),
+   bu(BU，取值形如 BU1 / BU2 / BU3，一定以 BU 开头),
+   department(部门，取值形如 机械部 / 电子部 / 测试部 / 软件部),
    hire_date(入职), awarded_date(获评), award_level(获评等级),
    total_expected(预计总额), total_received(累计到账),
    status(ongoing/completed/ended/stopped/resigned), remark(备注), is_deleted
