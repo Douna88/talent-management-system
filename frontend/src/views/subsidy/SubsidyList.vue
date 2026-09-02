@@ -37,7 +37,7 @@
         <el-table-column label="批注" width="70" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.comment_count" type="warning" size="small">💬{{ row.comment_count }}</el-tag>
-            <span v-else style="color:#ccc">—</span>
+            <span v-else style="color:#BFBFBF">—</span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="90">
@@ -88,17 +88,52 @@
                   <div style="white-space:pre-line">{{ c.content }}</div>
                 </el-popover>
               </template>
-              <span v-if="!row.comments.length" style="color:#ccc">—</span>
+              <span v-if="!row.comments.length" style="color:#BFBFBF">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="70" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
     </el-drawer>
+
+    <!-- 编辑发放明细 -->
+    <el-dialog v-model="editVisible" :title="`编辑明细 - ${currentApp?.name || ''}`" width="480px">
+      <el-form :model="editForm" label-width="100px">
+        <el-form-item label="期次">
+          <el-input-number v-model="editForm.payment_index" :min="1" :max="99" />
+        </el-form-item>
+        <el-form-item label="金额(元)">
+          <el-input-number v-model="editForm.amount" :min="0" :precision="2" :step="100" style="width:200px" />
+          <span class="hint">（当前显示 {{ fmt(editForm.amount) }}）</span>
+        </el-form-item>
+        <el-form-item label="实发日期">
+          <el-date-picker v-model="editForm.actual_date" type="date"
+                          :value-format="'YYYY.MM.DD'" placeholder="选择日期" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="editForm.remark" type="textarea" :rows="3"
+                    placeholder="可修改或删除备注（留空 = 清空备注）" />
+        </el-form-item>
+        <el-form-item label="">
+          <el-alert type="info" :closable="false" show-icon
+                    title="保存后若该笔为已确认/已发放，系统会自动重算此人的「累计到账」。" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editVisible = false">取消</el-button>
+        <el-button type="primary" :loading="editSaving" @click="submitEdit">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import api from '../../api'
 
 const rows = ref([])
@@ -113,6 +148,12 @@ const drawerTitle = ref('')
 const currentApp = ref(null)
 const payments = ref([])
 const detailLoading = ref(false)
+
+// 编辑明细（金额/备注/实发日期/期次）
+const editVisible = ref(false)
+const editSaving = ref(false)
+const editForm = reactive({ amount: 0, remark: '', actual_date: '', payment_index: 1 })
+const editingId = ref(null)
 
 const statusMap = {
   ongoing: '进行中', completed: '已满期', ended: '已结束', stopped: '停发', resigned: '离职',
@@ -152,6 +193,40 @@ async function openDetail(row) {
   } finally { detailLoading.value = false }
 }
 
+function openEdit(row) {
+  editingId.value = row.id
+  Object.assign(editForm, {
+    payment_index: row.payment_index,
+    amount: row.amount,
+    remark: row.remark || '',
+    actual_date: row.actual_date || '',
+  })
+  editVisible.value = true
+}
+
+async function submitEdit() {
+  if (editForm.amount === null || editForm.amount === undefined || editForm.amount < 0) {
+    ElMessage.warning('金额不能为负数'); return
+  }
+  editSaving.value = true
+  try {
+    await api.put(`/subsidy/payments/${editingId.value}`, {
+      payment_index: editForm.payment_index,
+      amount: editForm.amount,
+      remark: editForm.remark,
+      actual_date: editForm.actual_date || null,
+    })
+    ElMessage.success('已保存')
+    editVisible.value = false
+    // 刷新明细 + 主表（累计到账可能变化）
+    await Promise.all([
+      (async () => { payments.value = await api.get(`/subsidy/applications/${currentApp.value.id}/payments`) })(),
+      load(),
+    ])
+  } catch { /* 拦截器已提示 */ }
+  editSaving.value = false
+}
+
 async function exportExcel() {
   const res = await api.get('/export/subsidy', { responseType: 'blob' })
   const url = URL.createObjectURL(res)
@@ -171,4 +246,5 @@ onMounted(async () => {
 <style scoped>
 .toolbar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
 .detail-wrap { padding: 0 8px; }
+.hint { margin-left: 8px; color: #8C8C8C; font-size: 12px; }
 </style>

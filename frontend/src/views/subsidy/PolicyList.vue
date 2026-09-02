@@ -393,18 +393,18 @@ onMounted(load)
 
 <style scoped>
 .toolbar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
-.tip { color: #999; font-size: 12px; }
-.up-tip { color: #888; font-size: 13px; margin-bottom: 12px; }
+.tip { color: #8C8C8C; font-size: 12px; }
+.up-tip { color: #8C8C8C; font-size: 13px; margin-bottom: 12px; }
 .mb { margin-bottom: 14px; }
 .rule-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.rcount { color: #888; font-size: 13px; }
-.rule-card { border: 1px solid #ebeef5; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: #fafbfc; }
+.rcount { color: #8C8C8C; font-size: 13px; }
+.rule-card { border: 1px solid #E8E8E8; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: #F8FAFC; }
 .rule-head { display: flex; gap: 8px; align-items: flex-start; }
 .rule-desc { font-size: 14px; flex: 1; line-height: 1.5; }
 .rule-ops { flex-shrink: 0; }
-.rule-quote { margin-top: 6px; font-size: 12px; color: #999; padding-left: 4px; border-left: 2px solid #dcdfe6; }
+.rule-quote { margin-top: 6px; font-size: 12px; color: #8C8C8C; padding-left: 4px; border-left: 2px solid #E8E8E8; }
 .rule-edit { margin-bottom: 10px; }
-.re-title { font-weight: 600; margin-bottom: 10px; color: #303133; }
+.re-title { font-weight: 600; margin-bottom: 10px; color: #262626; }
 .re-actions { text-align: right; }
 .dlg-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .dtip { color: #999; font-size: 12px; }

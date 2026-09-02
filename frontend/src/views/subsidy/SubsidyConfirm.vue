@@ -107,11 +107,20 @@
               </template>
               <el-tag type="warning" size="small">💬{{ row.comments.length }}</el-tag>
             </el-tooltip>
-            <span v-else style="color:#ccc">—</span>
+            <span v-else style="color:#BFBFBF">—</span>
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.remark || '—' }}</template>
+        <el-table-column label="备注" min-width="160">
+          <template #default="{ row }">
+            <template v-if="editingRemarkId === row.id">
+              <el-input v-model="editingRemarkText" size="small" style="width:150px"
+                        @keyup.enter="saveRemark(row)" @blur="saveRemark(row)" />
+            </template>
+            <el-link v-else type="primary" :underline="false"
+                     @click="startEditRemark(row)" class="remark-cell">
+              {{ row.remark || '点击填写备注' }}
+            </el-link>
+          </template>
         </el-table-column>
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
@@ -124,6 +133,7 @@
                        @click="openConfirm(row)">确认</el-button>
             <el-button link type="danger" :disabled="row.status === 'paid'"
                        @click="openReject(row)">有异议</el-button>
+            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
             <el-button link type="primary" @click="openComment(row)">批注</el-button>
           </template>
         </el-table-column>
@@ -226,6 +236,37 @@
         <el-button type="primary" :loading="submitting" @click="submitCreate">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 编辑已有发放 -->
+    <el-dialog v-model="editVisible" :title="`编辑发放 — ${editRow?.name || ''}`" width="520px">
+      <el-form :model="editForm" label-width="100px">
+        <el-form-item label="姓名 / 政策">
+          <span class="edit-target">{{ editRow?.name }} · {{ editRow?.policy_name }} · 第 {{ editRow?.payment_index }} 期</span>
+        </el-form-item>
+        <el-form-item label="期次">
+          <el-input-number v-model="editForm.payment_index" :min="1" :max="99" />
+        </el-form-item>
+        <el-form-item label="金额(元)" required>
+          <el-input-number v-model="editForm.amount" :min="0" :precision="2" :step="100" />
+        </el-form-item>
+        <el-form-item label="实发日期">
+          <el-date-picker v-model="editForm.actual_date" type="date"
+                          :value-format="'YYYY-MM-DD'" placeholder="选择日期" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="editForm.remark" type="textarea" :rows="3"
+                    placeholder="可修改或删除备注（留空 = 清空备注）" />
+        </el-form-item>
+        <el-form-item label="">
+          <el-alert type="info" :closable="false" show-icon
+                    title="保存后若该笔为已确认/已发放，系统会自动重算此人的「累计到账」。" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitEdit">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -260,6 +301,15 @@ const cmtText = ref('')
 
 const createVisible = ref(false)
 const newPay = reactive({ application_id: null, payment_index: 1, amount: 0, expected_date: '', remark: '' })
+
+// 行内改备注
+const editingRemarkId = ref(null)
+const editingRemarkText = ref('')
+
+// 编辑已有发放（金额/备注/实发日期/期次）
+const editVisible = ref(false)
+const editRow = ref(null)
+const editForm = reactive({ payment_index: 1, amount: 0, actual_date: '', remark: '' })
 
 const fmt = v => (v === null || v === undefined || v === '') ? '0.0000 万元'
   : (Number(v) / 10000).toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + ' 万元'
@@ -389,6 +439,58 @@ async function batchConfirm() {
   submitting.value = false
 }
 
+/** 列表日期是 YYYY.MM.DD，date-picker 需要 YYYY-MM-DD */
+function normDate(s) {
+  if (!s) return ''
+  const m = String(s).match(/(\d{4})[.\/](\d{1,2})[.\/](\d{1,2})/)
+  return m ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : s
+}
+
+function startEditRemark(row) {
+  editingRemarkId.value = row.id
+  editingRemarkText.value = row.remark || ''
+}
+
+function saveRemark(row) {
+  if (editingRemarkId.value !== row.id) return
+  editingRemarkId.value = null
+  const v = editingRemarkText.value.trim()
+  if ((row.remark || '') === v) return
+  api.put(`/subsidy/payments/${row.id}`, { remark: v || null })
+    .then(() => { ElMessage.success('备注已保存'); load() })
+    .catch(() => { /* 拦截器已提示 */ })
+}
+
+function openEdit(row) {
+  editRow.value = row
+  Object.assign(editForm, {
+    payment_index: row.payment_index,
+    amount: row.amount,
+    actual_date: normDate(row.actual_date),
+    remark: row.remark || '',
+  })
+  editVisible.value = true
+}
+
+async function submitEdit() {
+  if (editForm.amount === null || editForm.amount === undefined || editForm.amount < 0) {
+    ElMessage.warning('金额不能为负数'); return
+  }
+  submitting.value = true
+  try {
+    await api.put(`/subsidy/payments/${editRow.value.id}`, {
+      payment_index: editForm.payment_index,
+      amount: editForm.amount,
+      actual_date: editForm.actual_date || null,
+      remark: editForm.remark,
+    })
+    ElMessage.success('已保存')
+    editVisible.value = false
+    await Promise.all([load(), loadSummary()])
+  } catch { /* 拦截器已提示 */ }
+  submitting.value = false
+}
+
 async function openCreate() {
   if (!applications.value.length) {
     try { applications.value = await api.get('/subsidy/applications') } catch { applications.value = [] }
@@ -419,24 +521,24 @@ onMounted(async () => {
 
 <style scoped>
 .cards { margin-bottom: 12px; }
-.stat-card { border-left: 4px solid #dcdfe6; }
+.stat-card { border-left: 4px solid #E8E8E8; }
 .guide { margin-bottom: 14px; }
-.guide-body { font-size: 13px; line-height: 1.9; color: #455; }
-.stat-card.pending { border-left-color: #e6a23c; }
-.stat-card.rejected { border-left-color: #f56c6c; }
-.stat-card.done { border-left-color: #67c23a; }
-.stat-card.total { border-left-color: #409eff; }
-.sc-label { font-size: 13px; color: #909399; }
-.sc-value { font-size: 26px; font-weight: 600; color: #303133; margin: 4px 0 2px; }
-.sc-unit { font-size: 13px; font-weight: 400; color: #909399; }
-.sc-sub { font-size: 12.5px; color: #909399; }
+.guide-body { font-size: 13px; line-height: 1.9; color: #595959; }
+.stat-card.pending { border-left-color: #FAAD14; }
+.stat-card.rejected { border-left-color: #FF4D4F; }
+.stat-card.done { border-left-color: #52C41A; }
+.stat-card.total { border-left-color: #2F6FED; }
+.sc-label { font-size: 13px; color: #8C8C8C; }
+.sc-value { font-size: 26px; font-weight: 600; color: #262626; margin: 4px 0 2px; }
+.sc-unit { font-size: 13px; font-weight: 400; color: #8C8C8C; }
+.sc-sub { font-size: 12.5px; color: #8C8C8C; }
 
 .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
 .spacer { flex: 1; }
 
-.rule-title { font-size: 13px; font-weight: 600; color: #409eff; }
+.rule-title { font-size: 13px; font-weight: 600; color: #2F6FED; }
 .rule-empty { margin-bottom: 4px; }
 .rule-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
-.rule-item { display: flex; gap: 8px; align-items: flex-start; background: #f7f9fc; border-radius: 8px; padding: 8px 10px; }
-.rule-item .rule-text { font-size: 13px; color: #455; line-height: 1.5; }
+.rule-item { display: flex; gap: 8px; align-items: flex-start; background: #F8FAFC; border-radius: 8px; padding: 8px 10px; }
+.rule-item .rule-text { font-size: 13px; color: #595959; line-height: 1.5; }
 </style>

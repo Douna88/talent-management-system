@@ -35,7 +35,7 @@
         <el-card shadow="never">
           <template #header>职称等级分布 / 学历分布</template>
           <div ref="titleRef" class="chart" style="height:220px"></div>
-          <div style="height:8px;border-top:1px dashed #eee;margin:4px 16px"></div>
+          <div style="height:8px;border-top:1px dashed #E8E8E8;margin:4px 16px"></div>
           <div ref="eduRef" class="chart" style="height:220px"></div>
         </el-card>
       </el-col>
@@ -79,7 +79,7 @@ function makeBar(data, nameField = 'name', valueField = 'value') {
     grid: { left: 10, right: 30, bottom: 10, top: 10, containLabel: true },
     xAxis: { type: 'value' },
     yAxis: { type: 'category', data: names, inverse: true, axisLabel: { width: 120, overflow: 'truncate' } },
-    series: [{ type: 'bar', data: values, barMaxWidth: 18, itemStyle: { color: '#409eff' } }]
+    series: [{ type: 'bar', data: values, barMaxWidth: 18, itemStyle: { color: '#2F6FED' } }]
   }
 }
 

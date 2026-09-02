@@ -140,5 +140,5 @@ onMounted(load)
 
 <style scoped>
 .toolbar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
-.tip { color: #999; font-size: 12px; }
+.tip { color: #8C8C8C; font-size: 12px; }
 </style>

@@ -408,6 +408,54 @@ def reject_payment(payment_id: int, req: RejectRequest, db: Session = Depends(ge
     return {"ok": True, "message": "已标记有异议", "payment": _payment_row(p, db)}
 
 
+class PaymentUpdate(BaseModel):
+    """人工订正一笔发放记录：可改 金额 / 备注 / 实发日期 / 期次。
+    约定：不传该字段 = 保持不变；传空串/空值 = 清空（备注/实发日期）。"""
+    amount: Optional[float] = None
+    remark: Optional[str] = None        # "" = 清空备注
+    actual_date: Optional[str] = None   # "" = 清空实发日期
+    payment_index: Optional[int] = None
+
+
+@router.put("/payments/{payment_id}")
+def update_payment(payment_id: int, req: PaymentUpdate, db: Session = Depends(get_db),
+                   current_user: SysUser = Depends(get_current_user)):
+    """修改一笔发放记录（金额/备注/实发日期/期次），修改后自动重算累计到账。"""
+    p = db.query(SubsidyPayment).filter(SubsidyPayment.id == payment_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="发放记录不存在")
+    before = {"amount": p.amount, "remark": p.remark,
+              "actual_date": str(p.actual_date) if p.actual_date else None,
+              "payment_index": p.payment_index}
+    if req.amount is not None:
+        if req.amount < 0:
+            raise HTTPException(status_code=400, detail="金额不能为负数")
+        p.amount = round(req.amount, 2)
+    if req.remark is not None:
+        p.remark = req.remark.strip() or None
+    if req.actual_date is not None:
+        p.actual_date = _parse_date(req.actual_date) if req.actual_date else None
+    if req.payment_index is not None:
+        if req.payment_index < 1:
+            raise HTTPException(status_code=400, detail="期次必须 >= 1")
+        dup = db.query(SubsidyPayment).filter(
+            SubsidyPayment.application_id == p.application_id,
+            SubsidyPayment.payment_index == req.payment_index,
+            SubsidyPayment.id != p.id).first()
+        if dup:
+            raise HTTPException(status_code=400, detail=f"该申领已有第 {req.payment_index} 期记录，期次不能重复")
+        p.payment_index = req.payment_index
+    app = db.query(SubsidyApplication).filter(SubsidyApplication.id == p.application_id).first()
+    _recalc_received(db, app)
+    _log(db, current_user, "update", "subsidy_payment", p.id, before=before,
+         after={"amount": p.amount, "remark": p.remark,
+                "actual_date": str(p.actual_date) if p.actual_date else None,
+                "payment_index": p.payment_index})
+    db.commit()
+    db.refresh(p)
+    return {"ok": True, "message": "已更新", "payment": _payment_row(p, db)}
+
+
 class BatchConfirmRequest(BaseModel):
     ids: List[int]
     remark: Optional[str] = None

@@ -34,7 +34,8 @@ import api from '../api'
 const router = useRouter()
 const formRef = ref()
 const loading = ref(false)
-const form = reactive({ username: '', password: '' })
+// 默认账号已预填，直接点「登录」即可；也可手动改账号
+const form = reactive({ username: 'admin', password: 'admin123' })
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
@@ -65,7 +66,7 @@ function submit() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #001529 0%, #003a70 100%);
+  background: linear-gradient(135deg, #141F33 0%, #1a3a6e 100%);
 }
 .login-card {
   width: 380px;
@@ -79,9 +80,9 @@ function submit() {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  color: #001529;
+  color: #141F33;
   margin-bottom: 4px;
 }
 .login-title h2 { font-size: 22px; margin: 0; }
-.login-sub { text-align: center; color: #999; margin: 0 0 24px; font-size: 13px; }
+.login-sub { text-align: center; color: #8C8C8C; margin: 0 0 24px; font-size: 13px; }
 </style>

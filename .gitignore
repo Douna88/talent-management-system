@@ -1,40 +1,13 @@
-# ---- 数据库与运行时数据（含真实数据，绝不入库）----
+# 运行期生成
 *.db
 *.db-wal
 *.db-shm
-*.sqlite
-*.sqlite3
-backend/talent.db*
-
-# ---- 上传文件（政策原文 / 证书扫描件等）----
-# 忽略目录内容但保留目录本身，运行时会自动创建
+__pycache__/
+*.pyc
+backend/static/
 backend/uploads/*
 !backend/uploads/.gitkeep
-
-# ---- 前端构建产物 ----
-backend/static/
-frontend/dist/
-frontend/node_modules/
-
-# ---- Python ----
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
 venv/
-env/
-
-# ---- 环境变量与密钥 ----
-.env
-.env.*
-!.env.example
-
-# ---- 日志 ----
-*.log
-backend/backend.log
-
-# ---- 编辑器 / 系统 ----
-.idea/
-.vscode/
+node_modules/
 .DS_Store
-Thumbs.db
+.env

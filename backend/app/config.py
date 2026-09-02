@@ -39,7 +39,7 @@ ALLOWED_EXTENSIONS = {
 # ===== AI service (three-mode switch, v2.2) =====
 # AI_PROVIDER: "none" (off) / "local" (intranet LLM) / "cloud" (cloud LLM)
 # 内网本地大模型（IT 提供，OpenAI 兼容，免鉴权）
-AI_ENABLED = os.getenv("AI_ENABLED", "true").lower() in ("1", "true", "yes")
+AI_ENABLED = os.getenv("AI_ENABLED", "false").lower() in ("1", "true", "yes")
 AI_PROVIDER = os.getenv("AI_PROVIDER", "local")  # none / local / cloud
 AI_BASE_URL = os.getenv("AI_BASE_URL", "http://localhost:8000/v1")
 AI_API_KEY = os.getenv("AI_API_KEY", "")  # 内网免鉴权，留空
